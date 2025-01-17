@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NKM Pride Poll</title>
+    <style>
+        :root {
+            --rainbow-1: #FF0018;
+            --rainbow-2: #FFA52C;
+            --rainbow-3: #FFFF41;
+            --rainbow-4: #008018;
+            --rainbow-5: #0000F9;
+            --rainbow-6: #86007D;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #ff69b4, #ff8c00, #ffff00, #00ff00, #00ffff, #ff00ff);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            min-height: 100vh;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(to right, var(--rainbow-1), var(--rainbow-2), var(--rainbow-3), 
+                                               var(--rainbow-4), var(--rainbow-5), var(--rainbow-6));
+            -webkit-background-clip: text;
+            color: transparent;
+            font-size: 2.5rem;
+        }
+
+        .form-section {
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            padding: 10px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #ff69b4;
+            border-radius: 25px;
+            width: 60%;
+            max-width: 300px;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 1.1rem;
+            background: linear-gradient(45deg, #ff69b4, #ff8c00);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .nominees {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .nominee {
+            padding: 1rem;
+            background: linear-gradient(45deg, #ff69b4, #ff8c00);
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .nominee:hover {
+            transform: scale(1.05);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #resultsList {
+            margin-top: 2rem;
+        }
+
+        .result-item {
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background: linear-gradient(45deg, rgba(255,105,180,0.1), rgba(255,140,0,0.1));
+            border-radius: 15px;
+            border: 2px solid rgba(255,105,180,0.3);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(255,105,180,0.2);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .nominee-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff69b4;
+        }
+
+        .vote-count {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #ff8c00;
+            background: rgba(255,140,0,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        .voters-list {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .voters-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌈 NKM Pride Poll 🌈</h1>
+        
+        <div id="nameInput" class="form-section">
+            <input type="text" id="voterName" placeholder="Enter your name">
+            <button onclick="submitName()">Continue</button>
+        </div>
+
+        <div id="votingSection" class="form-section hidden">
+            <h2>Cast Your Vote</h2>
+            <div class="nominees">
+                <div class="nominee" onclick="vote('Vishal')">
+                    <span>🌈 Vishal</span>
+                </div>
+                <div class="nominee" onclick="vote('Ojasv')">
+                    <span>🌈 Ojasv</span>
+                </div>
+                <div class="nominee" onclick="vote('Shagun')">
+                    <span>🌈 Shagun</span>
+                </div>
+                <div class="nominee" onclick="vote('Anubhav')">
+                    <span>🌈 Anubhav</span>
+                </div>
+                <div class="nominee" onclick="vote('Sharon')">
+                    <span>🌈 Sharon</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <h2>Current Results</h2>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDmUMqxh1FZPb5_rY4SdE2Z5okqBjliaig",
+            authDomain: "flag-guesser-f9cb6.firebaseapp.com",
+            projectId: "flag-guesser-f9cb6",
+            storageBucket: "flag-guesser-f9cb6.firebasestorage.app",
+            messagingSenderId: "355559013964",
+            appId: "1:355559013964:web:b3e103dd006147587ebee9"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global variables
+        let currentVoter = "";
+
+        // Function to submit name
+        window.submitName = async function() {
+            const nameInput = document.getElementById('voterName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+
+            // Check if user has already voted
+            if (localStorage.getItem('hasVoted')) {
+                alert('You have already voted!');
+                showResults();
+                return;
+            }
+
+            currentVoter = name;
+            document.getElementById('nameInput').classList.add('hidden');
+            document.getElementById('votingSection').classList.remove('hidden');
+        }
+
+        // Function to cast vote
+        window.vote = async function(nominee) {
+            if (!currentVoter) {
+                alert('Please enter your name first');
+                return;
+            }
+
+            try {
+                // Save vote to Firebase
+                await addDoc(collection(db, "votes"), {
+                    voter: currentVoter,
+                    nominee: nominee,
+                    timestamp: new Date()
+                });
+
+                // Save to local storage to prevent multiple votes
+                localStorage.setItem('hasVoted', 'true');
+
+                // Show results
+                await showResults();
+                
+                document.getElementById('votingSection').classList.add('hidden');
+                document.getElementById('results').classList.remove('hidden');
+            } catch (error) {
+                console.error("Error adding vote: ", error);
+                alert('Error casting vote. Please try again.');
+            }
+        }
+
+        // Function to display results
+        async function showResults() {
+            const resultsDiv = document.getElementById('resultsList');
+            resultsDiv.innerHTML = '';
+            document.getElementById('results').classList.remove('hidden');
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "votes"));
+                const votes = {};
+                const voters = {};
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    votes[data.nominee] = (votes[data.nominee] || 0) + 1;
+                    if (!voters[data.nominee]) voters[data.nominee] = [];
+                    voters[data.nominee].push(data.voter);
+                });
+
+                // Sort nominees by vote count
+                const sortedNominees = Object.entries(votes)
+                    .sort(([,a], [,b]) => b - a);
+
+                for (const [nominee, count] of sortedNominees) {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    resultItem.innerHTML = `
+                        <div class="result-header">
+                            <span class="nominee-name">🌈 ${nominee}</span>
+                            <span class="vote-count">${count} vote${count !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="voters-list">
+                            <div class="voters-title">Voted by:</div>
+                            ${voters[nominee].join(', ')}
+                        </div>
+                    `;
+                    resultsDiv.appendChild(resultItem);
+                }
+            } catch (error) {
+                console.error("Error getting results: ", error);
+                alert('Error loading results. Please try again.');
+            }
+        }
+
+        // Show results immediately if user has already voted
+        if (localStorage.getItem('hasVoted')) {
+            document.getElementById('nameInput').classList.add('hidden');
+            showResults();
+        }
+    </script>
+</body>
+</html>
